@@ -17,8 +17,12 @@ const { width } = Dimensions.get('window');
 const CategoryScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('DONUTS');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successProduct, setSuccessProduct] = useState(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { addToCart } = useCart(); // Get addToCart from context
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const successFadeAnim = useRef(new Animated.Value(0)).current;
+  const { addToCart } = useCart();
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -27,7 +31,6 @@ const CategoryScreen = ({ navigation }) => {
       useNativeDriver: true,
     }).start();
   }, []);
-
 
   const categories = [
     { id: '1', name: 'DONUTS', count: '27 items', emoji: '🍩', color: '#FF6B8B', icon: '🌈' },
@@ -211,23 +214,33 @@ const CategoryScreen = ({ navigation }) => {
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle Add to Cart with beautiful feedback
+  // Handle Add to Cart with beautiful animation
   const handleAddToCart = (product) => {
-    addToCart(product, 1, 'Regular');
-    Alert.alert(
-      '🎉 Added to Cart!',
-      `${product.name} has been added to your cart!`,
-      [
-        {
-          text: 'Keep Shopping',
-          style: 'cancel'
-        },
-        {
-          text: 'View Cart',
-          onPress: () => navigation.navigate('Cart')
-        }
-      ]
-    );
+    try {
+      addToCart(product, 1, 'Regular');
+      
+      // Show success animation
+      setSuccessProduct(product);
+      setShowSuccess(true);
+      Animated.sequence([
+        Animated.timing(successFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1500),
+        Animated.timing(successFadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowSuccess(false);
+        setSuccessProduct(null);
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
   };
   
   // Donut decorations for background
@@ -392,6 +405,19 @@ const CategoryScreen = ({ navigation }) => {
         {/* Bottom Spacer for tab bar */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Success Message */}
+      {showSuccess && successProduct && (
+        <Animated.View style={[styles.successMessage, { opacity: successFadeAnim }]}>
+          <View style={styles.successContent}>
+            <Text style={styles.successEmoji}>🎉</Text>
+            <View style={styles.successTextContainer}>
+              <Text style={styles.successText}>Added to Cart!</Text>
+              <Text style={styles.successSubtext}>{successProduct.name}</Text>
+            </View>
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -676,6 +702,43 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 90,
+  },
+  // Success Message Styles
+  successMessage: {
+    position: 'absolute',
+    top: '40%',
+    left: '50%',
+    transform: [{ translateX: -120 }],
+    backgroundColor: 'rgba(76, 175, 80, 0.95)',
+    padding: 25,
+    borderRadius: 20,
+    width: 240,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  successContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  successEmoji: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  successTextContainer: {
+    flex: 1,
+  },
+  successText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  successSubtext: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
   },
 });
 

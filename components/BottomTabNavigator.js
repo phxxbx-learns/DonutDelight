@@ -32,18 +32,21 @@ const BottomTabNavigator = ({ user, onLogout }) => {
             }
 
             return (
-              <View style={[
-                styles.iconContainer,
-                focused && styles.iconContainerFocused
-              ]}>
-                <Ionicons name={iconName} size={22} color={color} />
-                {route.name === 'Cart' && cartItemCount > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {cartItemCount}
-                    </Text>
-                  </View>
-                )}
+              <View style={styles.iconWrapper}>
+                <View style={[
+                  styles.iconContainer,
+                  focused && styles.iconContainerFocused
+                ]}>
+                  <Ionicons name={iconName} size={22} color={focused ? 'white' : '#FF6B8B'} />
+                  {route.name === 'Cart' && cartItemCount > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {cartItemCount > 9 ? '9+' : cartItemCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {focused && <View style={styles.activeDot} />}
               </View>
             );
           },
@@ -79,44 +82,79 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     elevation: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    height: 80,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    shadowRadius: 20,
+    height: 85,
+    borderRadius: 25,
     marginHorizontal: 20,
-    marginBottom: 10,
-    paddingBottom: 10,
+    marginBottom: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   tabBarLabel: {
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 5,
+    fontFamily: 'System',
+  },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
     position: 'relative',
-    padding: 8,
-    borderRadius: 20,
   },
   iconContainerFocused: {
-    backgroundColor: 'rgba(255, 107, 139, 0.1)',
+    backgroundColor: '#FF6B8B',
+    transform: [{ scale: 1.1 }],
+    shadowColor: '#FF6B8B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FF6B8B',
+    marginTop: 4,
   },
   badge: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: 8,
+    right: 8,
     backgroundColor: '#FF6B8B',
     borderRadius: 10,
-    width: 18,
+    minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   badgeText: {
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
+    textAlign: 'center',
+    paddingHorizontal: 4,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,18 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Image
+  Animated
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 
 const CheckoutScreen = ({ navigation }) => {
   const [promoCode, setPromoCode] = useState('');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const { cartItems, updateCartItem, removeFromCart, clearCart } = useCart(); // Get cart functions from context
+  const [showSuccess, setShowSuccess] = useState(false);
+  const successFadeAnim = useRef(new Animated.Value(0)).current;
+  const { cartItems, updateCartItem, removeFromCart, clearCart } = useCart();
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  const orderFadeAnim = useRef(new Animated.Value(0)).current;
 
   const calculateTotals = () => {
     const subtotal = cartItems.reduce((total, item) => {
@@ -38,7 +42,23 @@ const CheckoutScreen = ({ navigation }) => {
 
   const applyPromoCode = () => {
     if (promoCode === 'SWEET20') {
-      Alert.alert('Success!', '20% discount applied! 🎉');
+      // Show animated success instead of Alert
+      setShowSuccess(true);
+      Animated.sequence([
+        Animated.timing(successFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1500),
+        Animated.timing(successFadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowSuccess(false);
+      });
     } else if (promoCode) {
       Alert.alert('Invalid Code', 'This promo code is not valid.');
     }
@@ -49,30 +69,36 @@ const CheckoutScreen = ({ navigation }) => {
       Alert.alert('Empty Cart', 'Add some delicious items to your cart first! 🍩');
       return;
     }
-
+  
     setIsCheckingOut(true);
-    Alert.alert(
-      'Order Confirmed!',
-      `Your order of ₱${totals.total} has been placed successfully! 🎉\n\nYour donuts will be ready in 15-20 minutes.`,
-      [
-        {
-          text: 'Awesome!',
-          onPress: () => {
-            clearCart();
-            setIsCheckingOut(false);
-          }
-        }
-      ]
-    );
+    
+    // Show order success animation
+    setTimeout(() => {
+      setShowOrderSuccess(true);
+      Animated.sequence([
+        Animated.timing(orderFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2000),
+        Animated.timing(orderFadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowOrderSuccess(false);
+        clearCart();
+        setIsCheckingOut(false);
+      });
+    }, 500);
   };
 
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
       <View style={styles.itemImage}>
         <Text style={styles.itemEmoji}>{item.emoji}</Text>
-        {/* Replace with Image when ready:
-        <Image source={item.image} style={styles.itemImage} resizeMode="cover" />
-        */}
       </View>
       
       <View style={styles.itemDetails}>
@@ -108,7 +134,7 @@ const CheckoutScreen = ({ navigation }) => {
     </View>
   );
 
-  if (cartItems.length === 0) {
+  if (cartItems.length === 0 && !showSuccess) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyEmoji}>🛒</Text>
@@ -196,7 +222,7 @@ const CheckoutScreen = ({ navigation }) => {
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Checkout Button - Fixed at bottom but higher */}
+      {/* Checkout Button */}
       <View style={styles.checkoutSection}>
         <TouchableOpacity 
           style={[
@@ -215,6 +241,32 @@ const CheckoutScreen = ({ navigation }) => {
           🚚 Free delivery on orders over ₱500
         </Text>
       </View>
+
+      {/* Promo Code Success Message */}
+      {showSuccess && (
+        <Animated.View style={[styles.successMessage, { opacity: successFadeAnim }]}>
+          <View style={styles.successContent}>
+            <Text style={styles.successEmoji}>🎉</Text>
+            <View style={styles.successTextContainer}>
+              <Text style={styles.successText}>Promo Applied!</Text>
+              <Text style={styles.successSubtext}>20% discount activated</Text>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Order Success Message */}
+      {showOrderSuccess && (
+        <Animated.View style={[styles.successMessage, { opacity: orderFadeAnim }]}>
+          <View style={styles.successContent}>
+            <Text style={styles.successEmoji}>🎉</Text>
+            <View style={styles.successTextContainer}>
+              <Text style={styles.successText}>Order Confirmed!</Text>
+              <Text style={styles.successSubtext}>Your donuts will be ready in 15-20 minutes</Text>
+            </View>
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -429,11 +481,10 @@ const styles = StyleSheet.create({
   },
   checkoutSection: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 110,
     backgroundColor: '#FFF9F2',
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    marginBottom: 70,
   },
   checkoutButton: {
     backgroundColor: '#FF6B8B',
@@ -502,7 +553,44 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   bottomSpacer: {
-    height: 20,
+    height: 40,
+  },
+  // Simple Success Message
+  successMessage: {
+    position: 'absolute',
+    top: '40%',
+    left: '50%',
+    transform: [{ translateX: -120 }],
+    backgroundColor: 'rgba(76, 175, 80, 0.95)',
+    padding: 25,
+    borderRadius: 20,
+    width: 240,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  successContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  successEmoji: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  successTextContainer: {
+    flex: 1,
+  },
+  successText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  successSubtext: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
   },
 });
 

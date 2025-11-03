@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  Image
+  Image,
+  SafeAreaView
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 
@@ -18,7 +19,8 @@ const ProductScreen = ({ navigation, route }) => {
   const [quantity, setQuantity] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { addToCart } = useCart(); // Get addToCart from context
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const { addToCart } = useCart();
 
   const product = route.params?.product || {
     id: '1',
@@ -27,14 +29,30 @@ const ProductScreen = ({ navigation, route }) => {
     description: 'A rich, aromatic espresso blended with perfectly steamed milk and topped with a thick layer of smooth, creamy foam. Balanced in flavor and perfect for any time of day.',
     emoji: '☕',
     category: 'BEVERAGE',
-    // image: require('../assets/cappuccino.jpg')
+    rating: '⭐ 4.8',
+    tags: ['Popular', 'Creamy', 'Aromatic']
   };
 
   const sizes = [
-    { name: 'Small', price: '₱80.00' },
-    { name: 'Medium', price: '₱100.00' },
-    { name: 'Large', price: '₱120.00' }
+    { name: 'Small', price: '₱80.00', description: '12oz' },
+    { name: 'Medium', price: '₱100.00', description: '16oz' },
+    { name: 'Large', price: '₱120.00', description: '20oz' }
   ];
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
 
   const increaseQuantity = () => setQuantity(quantity + 1);
   const decreaseQuantity = () => {
@@ -42,32 +60,62 @@ const ProductScreen = ({ navigation, route }) => {
   };
 
   const handleAddToCart = () => {
-    const selectedSizeObj = sizes.find(size => size.name === selectedSize);
-    const productWithSize = {
-      ...product,
-      price: selectedSizeObj.price,
-      size: selectedSize
-    };
     
-    addToCart(productWithSize, quantity, selectedSize);
-    
-    // Show success animation
-    setShowSuccess(true);
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.delay(1500),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowSuccess(false);
-    });
+    try {
+      const selectedSizeObj = sizes.find(size => size.name === selectedSize);
+      
+      // Create a simple cart item without complex nested properties
+      const cartItem = {
+        cartId: `${product.id}-${selectedSize}-${Date.now()}`, // Unique ID
+        id: product.id,
+        name: product.name,
+        price: selectedSizeObj?.price || product.price,
+        quantity: quantity,
+        size: selectedSize,
+        emoji: product.emoji || '🍩',
+        // Only include simple properties, avoid complex nested objects
+      };
+  
+      console.log('Adding cart item:', cartItem);
+      
+      if (addToCart) {
+        addToCart(cartItem);
+        
+        // Show success animation
+        setShowSuccess(true);
+        Animated.sequence([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.delay(1500),
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          setShowSuccess(false);
+        });
+      } else {
+        Alert.alert('Error', 'Cart functionality not available');
+      }
+      
+    } catch (error) {
+      console.error('Error in handleAddToCart:', error);
+      Alert.alert('Error', 'Failed to add item to cart');
+    }
+  };
+
+  const getProductBackground = (category) => {
+    switch(category) {
+      case 'BEVERAGE': return '#FF6B8B';
+      case 'DONUTS': return '#4ECDC4';
+      case 'DESSERT': return '#9966CC';
+      case 'PASTRIES': return '#FFB74D';
+      default: return '#FF6B8B';
+    }
   };
 
   const getProductImage = (category) => {
@@ -81,99 +129,226 @@ const ProductScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header with Back Button */}
+    <SafeAreaView style={styles.container}>
+      {/* Custom Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <View style={styles.backButtonInner}>
+            <Text style={styles.backButtonText}>←</Text>
+          </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Product Details</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Product Details</Text>
+          <Text style={styles.headerSubtitle}>Sweet perfection awaits</Text>
+        </View>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Product Image */}
-        <View style={styles.imageContainer}>
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.productEmoji}>{getProductImage(product.category)}</Text>
-            {/* Replace with Image when ready:
-            <Image source={product.image} style={styles.productImage} resizeMode="cover" />
+        {/* Hero Product Section */}
+        <Animated.View 
+          style={[
+            styles.heroSection,
+            { 
+              backgroundColor: getProductBackground(product.category),
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          {/* Space for Product Image - Replace this section with your image */}
+          <View style={styles.imageContainer}>
+            {/* CURRENT: Using emoji as placeholder */}
+            <View style={styles.emojiContainer}>
+              <Text style={styles.productEmoji}>{getProductImage(product.category)}</Text>
+              <View style={styles.emojiGlow} />
+            </View>
+            
+            {/* TODO: Replace with actual image */}
+            {/* 
+            <Image 
+              source={{ uri: product.imageUrl }} 
+              style={styles.productImage}
+              resizeMode="cover"
+            />
             */}
           </View>
-          <View style={styles.favoriteButton}>
-            <Text style={styles.favoriteIcon}>❤️</Text>
+          
+          <View style={styles.floatingElements}>
+            <View style={[styles.floatingElement, styles.floating1]}>
+              <Text style={styles.floatingEmoji}>✨</Text>
+            </View>
+            <View style={[styles.floatingElement, styles.floating2]}>
+              <Text style={styles.floatingEmoji}>🌟</Text>
+            </View>
+            <View style={[styles.floatingElement, styles.floating3]}>
+              <Text style={styles.floatingEmoji}>🎀</Text>
+            </View>
           </View>
-        </View>
+          
+          {/* Quick Info Overlay */}
+          <View style={styles.quickInfo}>
+            <View style={styles.ratingBadge}>
+              <Text style={styles.ratingText}>{product.rating}</Text>
+            </View>
+            <View style={styles.categoryTag}>
+              <Text style={styles.categoryText}>{product.category}</Text>
+            </View>
+          </View>
+        </Animated.View>
 
-        {/* Product Info */}
-        <View style={styles.infoContainer}>
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>
-            {sizes.find(size => size.name === selectedSize)?.price || product.price}
-          </Text>
+        {/* Product Details Card */}
+        <Animated.View 
+          style={[
+            styles.detailsCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.productHeader}>
+            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productPrice}>
+              {sizes.find(size => size.name === selectedSize)?.price || product.price}
+            </Text>
+          </View>
 
-          {/* Size Selection */}
-          <Text style={styles.sectionTitle}>Coffee Size</Text>
-          <View style={styles.sizeContainer}>
-            {sizes.map((size) => (
-              <TouchableOpacity
-                key={size.name}
-                style={[
-                  styles.sizeButton,
-                  selectedSize === size.name && styles.sizeButtonSelected
-                ]}
-                onPress={() => setSelectedSize(size.name)}
-              >
-                <Text style={[
-                  styles.sizeText,
-                  selectedSize === size.name && styles.sizeTextSelected
-                ]}>
-                  {size.name}
-                </Text>
-                <Text style={[
-                  styles.sizePrice,
-                  selectedSize === size.name && styles.sizePriceSelected
-                ]}>
-                  {size.price}
-                </Text>
-              </TouchableOpacity>
+          {/* Tags */}
+          <View style={styles.tagsContainer}>
+            {product.tags.map((tag, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
             ))}
           </View>
 
-          {/* Quantity Selector */}
-          <View style={styles.quantitySection}>
-            <Text style={styles.sectionTitle}>Quantity</Text>
-            <View style={styles.quantityControls}>
-              <TouchableOpacity style={styles.quantityButton} onPress={decreaseQuantity}>
-                <Text style={styles.quantityButtonText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.quantityText}>{quantity}</Text>
-              <TouchableOpacity style={styles.quantityButton} onPress={increaseQuantity}>
-                <Text style={styles.quantityButtonText}>+</Text>
-              </TouchableOpacity>
+          {/* Size Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Choose Your Size</Text>
+            <View style={styles.sizeContainer}>
+              {sizes.map((size) => (
+                <TouchableOpacity
+                  key={size.name}
+                  style={[
+                    styles.sizeCard,
+                    selectedSize === size.name && styles.sizeCardSelected
+                  ]}
+                  onPress={() => setSelectedSize(size.name)}
+                >
+                  <View style={[
+                    styles.sizeIcon,
+                    selectedSize === size.name && styles.sizeIconSelected
+                  ]}>
+                    <Text style={[
+                      styles.sizeEmoji,
+                      selectedSize === size.name && styles.sizeEmojiSelected
+                    ]}>
+                      {size.name === 'Small' ? 'S' : size.name === 'Medium' ? 'M' : 'L'}
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.sizeName,
+                    selectedSize === size.name && styles.sizeNameSelected
+                  ]}>
+                    {size.name}
+                  </Text>
+                  <Text style={[
+                    styles.sizePrice,
+                    selectedSize === size.name && styles.sizePriceSelected
+                  ]}>
+                    {size.price}
+                  </Text>
+                  <Text style={[
+                    styles.sizeDescription,
+                    selectedSize === size.name && styles.sizeDescriptionSelected
+                  ]}>
+                    {size.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
-          {/* About Section */}
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.description}>
-            {product.description}
-          </Text>
-          <Text style={styles.readMore}>Read more</Text>
+          {/* Quantity Selector */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quantity</Text>
+            <View style={styles.quantityCard}>
+              <View style={styles.quantityInfo}>
+                <Text style={styles.quantityLabel}>How many would you like?</Text>
+                <Text style={styles.quantitySubtitle}>Perfect for sharing or treating yourself</Text>
+              </View>
+              <View style={styles.quantityControls}>
+                <TouchableOpacity 
+                  style={styles.quantityButton} 
+                  onPress={decreaseQuantity}
+                >
+                  <Text style={styles.quantityButtonText}>-</Text>
+                </TouchableOpacity>
+                <View style={styles.quantityDisplay}>
+                  <Text style={styles.quantityText}>{quantity}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.quantityButton} 
+                  onPress={increaseQuantity}
+                >
+                  <Text style={styles.quantityButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
 
-          <Text style={styles.volume}>Volume: 160ml</Text>
-        </View>
+          {/* Description Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About This Delight</Text>
+            <View style={styles.descriptionCard}>
+              <Text style={styles.description}>
+                {product.description}
+              </Text>
+              <View style={styles.descriptionFeatures}>
+                <View style={styles.feature}>
+                  <Text style={styles.featureIcon}>🔥</Text>
+                  <Text style={styles.featureText}>Freshly Made</Text>
+                </View>
+                <View style={styles.feature}>
+                  <Text style={styles.featureIcon}>⭐</Text>
+                  <Text style={styles.featureText}>Premium Quality</Text>
+                </View>
+                <View style={styles.feature}>
+                  <Text style={styles.featureIcon}>🚚</Text>
+                  <Text style={styles.featureText}>Fast Delivery</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Bottom Spacer */}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Buy Now Button */}
+      {/* Sticky Add to Cart Button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.buyButton} onPress={handleAddToCart}>
-          <Text style={styles.buyButtonText}>Add to Cart</Text>
-          <View style={styles.buttonBadge}>
-            <Text style={styles.buttonBadgeText}>{quantity}</Text>
+        <TouchableOpacity 
+          style={styles.addToCartButton} 
+          onPress={handleAddToCart}
+        >
+          <View style={styles.buttonContent}>
+            <View style={styles.buttonTextContainer}>
+              <Text style={styles.addToCartText}>Add to Cart</Text>
+              <Text style={styles.buttonSubtext}>• Free delivery available</Text>
+            </View>
+            <View style={styles.quantityBadge}>
+              <Text style={styles.quantityBadgeText}>{quantity}</Text>
+            </View>
+            <View style={styles.buttonPrice}>
+              <Text style={styles.buttonPriceText}>
+                {sizes.find(size => size.name === selectedSize)?.price || product.price}
+              </Text>
+            </View>
           </View>
         </TouchableOpacity>
       </View>
@@ -181,11 +356,16 @@ const ProductScreen = ({ navigation, route }) => {
       {/* Success Message */}
       {showSuccess && (
         <Animated.View style={[styles.successMessage, { opacity: fadeAnim }]}>
-          <Text style={styles.successEmoji}>🎉</Text>
-          <Text style={styles.successText}>Added to Cart!</Text>
+          <View style={styles.successContent}>
+            <Text style={styles.successEmoji}>🎉</Text>
+            <View style={styles.successTextContainer}>
+              <Text style={styles.successText}>Added to Cart!</Text>
+              <Text style={styles.successSubtext}>Your delicious treat is waiting</Text>
+            </View>
+          </View>
         </Animated.View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -200,27 +380,49 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: 35, // Added space for status bar
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   backButton: {
+    padding: 8,
+  },
+  backButtonInner: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFF9F2',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   backButtonText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
+  headerCenter: {
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
   headerSpacer: {
     width: 40,
@@ -228,211 +430,408 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  imageContainer: {
-    height: 300,
-    backgroundColor: '#FF6B8B',
-    position: 'relative',
-  },
-  imagePlaceholder: {
-    flex: 1,
+  heroSection: {
+    height: 380,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    paddingTop: 60, // Added padding to push content below header
+  },
+  imageContainer: {
+    width: '100%',
+    height: 250,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // This container is ready for your image
   },
   productImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    // Add your image styles here
+  },
+  emojiContainer: {
+    position: 'relative',
+    // This will be replaced with your image
+  },
+  productEmoji: {
+    fontSize: 140,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
+  },
+  emojiGlow: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    top: -10,
+    left: -10,
+  },
+  floatingElements: {
+    position: 'absolute',
     width: '100%',
     height: '100%',
   },
-  productEmoji: {
-    fontSize: 120,
-  },
-  favoriteButton: {
+  floatingElement: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  favoriteIcon: {
-    fontSize: 20,
+  floating1: { top: 80, left: 30 },
+  floating2: { top: 130, right: 40 },
+  floating3: { bottom: 100, left: 50 },
+  floatingEmoji: {
+    fontSize: 16,
   },
-  infoContainer: {
+  quickInfo: {
+    position: 'absolute',
+    top: 70, // Adjusted for new header position
+    right: 20,
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  ratingBadge: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  categoryTag: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  detailsCard: {
     backgroundColor: 'white',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
     marginTop: -30,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
     padding: 25,
-    minHeight: 400,
+    minHeight: 600,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  productHeader: {
+    marginBottom: 20,
   },
   productName: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
   },
   productPrice: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FF6B8B',
-    marginBottom: 25,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 30,
+    gap: 8,
+  },
+  tag: {
+    backgroundColor: '#FFF9F2',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 15,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#FF6B8B',
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   sizeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 25,
+    gap: 12,
   },
-  sizeButton: {
+  sizeCard: {
     flex: 1,
-    padding: 15,
-    marginHorizontal: 5,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: '#F0F0F0',
     alignItems: 'center',
     backgroundColor: 'white',
+    minHeight: 120,
   },
-  sizeButtonSelected: {
+  sizeCardSelected: {
     backgroundColor: '#FF6B8B',
     borderColor: '#FF6B8B',
+    transform: [{ scale: 1.05 }],
   },
-  sizeText: {
+  sizeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFF9F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sizeIconSelected: {
+    backgroundColor: 'white',
+  },
+  sizeEmoji: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
   },
-  sizeTextSelected: {
+  sizeEmojiSelected: {
+    color: '#FF6B8B',
+  },
+  sizeName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  sizeNameSelected: {
     color: 'white',
   },
   sizePrice: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF6B8B',
+    marginBottom: 4,
   },
   sizePriceSelected: {
-    color: 'rgba(255,255,255,0.9)',
+    color: 'white',
   },
-  quantitySection: {
+  sizeDescription: {
+    fontSize: 12,
+    color: '#666',
+  },
+  sizeDescriptionSelected: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  quantityCard: {
+    backgroundColor: '#FFF9F2',
+    padding: 20,
+    borderRadius: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 25,
+  },
+  quantityInfo: {
+    flex: 1,
+  },
+  quantityLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  quantitySubtitle: {
+    fontSize: 12,
+    color: '#666',
   },
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F2',
+    backgroundColor: 'white',
     borderRadius: 25,
-    padding: 5,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   quantityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FF6B8B',
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
+  },
+  quantityDisplay: {
+    paddingHorizontal: 20,
   },
   quantityText: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginHorizontal: 20,
     color: '#333',
     minWidth: 30,
     textAlign: 'center',
+  },
+  descriptionCard: {
+    backgroundColor: '#FFF9F2',
+    padding: 20,
+    borderRadius: 20,
   },
   description: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
-    marginBottom: 10,
-  },
-  readMore: {
-    fontSize: 16,
-    color: '#FF6B8B',
-    fontWeight: '600',
     marginBottom: 20,
   },
-  volume: {
-    fontSize: 16,
+  descriptionFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  feature: {
+    alignItems: 'center',
+  },
+  featureIcon: {
+    fontSize: 20,
+    marginBottom: 5,
+  },
+  featureText: {
+    fontSize: 12,
     color: '#666',
-    fontStyle: 'italic',
+    fontWeight: '500',
+  },
+  bottomSpacer: {
+    height: 100,
   },
   footer: {
-    padding: 20,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    padding: 20,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
   },
-  buyButton: {
+  addToCartButton: {
     backgroundColor: '#FF6B8B',
     padding: 20,
-    borderRadius: 15,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    borderRadius: 20,
     shadowColor: '#FF6B8B',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 8,
   },
-  buyButtonText: {
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  buttonTextContainer: {
+    flex: 1,
+  },
+  addToCartText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-    marginRight: 10,
+    marginBottom: 2,
   },
-  buttonBadge: {
+  buttonSubtext: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+  },
+  quantityBadge: {
     backgroundColor: 'white',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    marginHorizontal: 15,
   },
-  buttonBadgeText: {
+  quantityBadgeText: {
     color: '#FF6B8B',
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+  buttonPrice: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  buttonPriceText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   successMessage: {
     position: 'absolute',
     top: '40%',
     left: '50%',
-    transform: [{ translateX: -100 }],
+    transform: [{ translateX: -120 }],
     backgroundColor: 'rgba(76, 175, 80, 0.95)',
-    padding: 20,
-    borderRadius: 15,
-    alignItems: 'center',
-    width: 200,
+    padding: 25,
+    borderRadius: 20,
+    width: 240,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 8,
   },
+  successContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   successEmoji: {
-    fontSize: 30,
-    marginBottom: 10,
+    fontSize: 32,
+    marginRight: 15,
+  },
+  successTextContainer: {
+    flex: 1,
   },
   successText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  successSubtext: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
   },
 });
 

@@ -167,6 +167,7 @@ const LoginScreen = ({ navigation, onLogin, user, onLogout, isProfile = false })
         <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </TouchableOpacity>
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     );
   }
@@ -593,6 +594,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 50,
     backgroundColor: '#FF6B8B',
+    paddingTop: 90,
   },
   avatarContainer: {
     position: 'relative',
@@ -662,6 +664,7 @@ const styles = StyleSheet.create({
   },
   profileSection: {
     padding: 25,
+    paddingBottom: 10,
   },
   sectionTitle: {
     fontSize: 22,
@@ -716,6 +719,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  bottomSpacer: {
+    height: 90,
   },
 });
 
